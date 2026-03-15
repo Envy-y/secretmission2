@@ -2,21 +2,13 @@
 .env
 venv/
 
-# Generated outputs (large files)
-audio/
-slides/
-output_images/
-output.md
-output.mp4
-*TEMP_MPY_wvf_snd*
+
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
 
-# PDFs (source documents)
-*.pdf
 
 # Keep scenes JSON examples but ignore generic outputs
 # scenes.json  ← uncomment to also ignore this
