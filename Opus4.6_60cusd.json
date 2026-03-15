@@ -1,0 +1,794 @@
+{
+  "scenes": [
+    {
+      "title": "Introduction to AIRT: Algorithmic IRT",
+      "section": "Introduction",
+      "key_points": [
+        "Item Response Theory (IRT) adapted for algorithm portfolio evaluation",
+        "AIRT = Algorithmic IRT, a framework for evaluating algorithm strengths and weaknesses",
+        "Extends previous IRT work from single datasets to entire repositories",
+        "No need for dataset feature computation unlike instance space analysis"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "This paper introduces AIRT, which stands for Algorithmic IRT, a novel framework for evaluating portfolios of algorithms. The key idea is to borrow Item Response Theory from educational psychometrics, where it's used to assess student ability and test question difficulty, and adapt it to evaluate how well algorithms perform across many datasets. Unlike previous work that applied IRT to a single dataset, AIRT evaluates algorithm portfolios across entire repositories of datasets. Importantly, it doesn't require computing any dataset features, relying solely on algorithm performance data."
+    },
+    {
+      "title": "Motivation: Why Better Algorithm Evaluation?",
+      "section": "Introduction",
+      "key_points": [
+        "Standard statistical analysis hides algorithm strengths and weaknesses",
+        "Average performance across test problems misses nuanced behavior",
+        "Need to evaluate diverse algorithms on diverse test problems",
+        "Algorithms may have unique niches where they excel"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "The motivation behind this work is that standard statistical analyses, like ranking algorithms by average performance, often hide important insights. An algorithm that's best on average might not be consistent, and an algorithm that performs poorly on average might have a unique niche where it outperforms everything else. To truly understand algorithm capabilities, we need to evaluate diverse portfolios on diverse test problems and look beyond simple averages. This is what AIRT aims to provide."
+    },
+    {
+      "title": "Prior Work: IRT for Machine Learning",
+      "section": "Introduction",
+      "key_points": [
+        "Martínez-Plumed et al. (2019): IRT on single classification dataset with observations as test items",
+        "Chen et al. (2019): Beta-3 IRT model for continuous responses on single datasets",
+        "Both approaches limited to evaluating algorithms on individual datasets",
+        "AIRT extends to portfolios across many datasets"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "Previous work by Martínez-Plumed and colleagues used IRT to evaluate machine learning classifiers on a single dataset, where individual observations served as test questions and algorithms as students. Chen and colleagues extended this with continuous response models. However, both approaches were limited to a single dataset, which provides limited diversity for understanding algorithm behavior. AIRT extends these ideas to work across many datasets, treating entire datasets as the test instances."
+    },
+    {
+      "title": "AIRT Key Contributions",
+      "section": "Introduction",
+      "key_points": [
+        "Novel inverted IRT mapping: algorithms as items, datasets as participants",
+        "New metrics: algorithm consistency, difficulty limit, anomalousness",
+        "Featureless problem space exploration using dataset difficulty",
+        "Algorithm portfolio construction with competitive performance",
+        "Available as R package 'airt'"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "The main contributions of this paper are significant. First, AIRT inverts the traditional IRT mapping so that algorithms become test items and datasets become participants. This seemingly counterintuitive flip yields a richer set of evaluation metrics including algorithm consistency, difficulty limit, and anomalousness. Second, AIRT explores the problem space without requiring any dataset features, using only performance data. Third, it can construct competitive algorithm portfolios. The entire framework is available as an R package called airt."
+    },
+    {
+      "title": "IRT Basics: The 3-Parameter Logistic Model",
+      "section": "IRT: Traditional setting",
+      "key_points": [
+        "IRT models latent traits like ability from observed responses",
+        "3PL model: discrimination α, difficulty d, guessing γ",
+        "Higher ability leads to higher probability of correct response",
+        "Discrimination determines steepness of the curve"
+      ],
+      "formulas": [
+        "\\Phi \\left ( x _ { i j } = 1 | \\theta _ { i } , \\alpha _ { j } , d _ { j } , \\gamma _ { j } \\right ) = \\gamma _ { j } + \\frac { 1 - \\gamma _ { j } } { 1 + \\exp \\left ( - D \\alpha _ { j } \\left ( \\theta _ { i } - d _ { j } \\right ) \\right ) }"
+      ],
+      "images": [
+        "page6_fig1.png"
+      ],
+      "narration": "Let's start with the basics of Item Response Theory. In the traditional educational setting, IRT models the probability that a student answers a question correctly based on their latent ability theta. The 3-Parameter Logistic model includes three parameters: discrimination alpha which controls the steepness of the curve, difficulty d which shifts the curve left or right, and a guessing parameter gamma for the lower bound. As shown in the figure, as a participant's ability increases, their probability of a correct response increases following a logistic curve."
+    },
+    {
+      "title": "Polytomous IRT Models",
+      "section": "IRT: Traditional setting",
+      "key_points": [
+        "Extends dichotomous to ordered response categories (e.g., strongly disagree to strongly agree)",
+        "Cumulative probability model by Samejima (1969)",
+        "Multiple difficulty thresholds for each response level",
+        "Lower ability → lower response category more likely"
+      ],
+      "formulas": [
+        "\\Phi \\left ( x _ { i j } \\geq k | \\theta _ { i } , \\alpha _ { j } , d _ { j } \\right ) = \\frac { 1 } { 1 + \\exp \\left ( - D \\alpha _ { j } \\left ( \\theta _ { i } - d _ { k } \\right ) \\right ) }",
+        "\\Phi \\left ( x _ { i j } = k | \\theta _ { i } , \\alpha _ { j } , d _ { j } \\right ) = \\Phi \\left ( x _ { i j } \\geq k | \\theta _ { i } , \\alpha _ { j } , d _ { j } \\right ) - \\Phi \\left ( x _ { i j } \\geq ( k + 1 ) \\theta _ { i } , \\alpha _ { j } , d _ { j } \\right )"
+      ],
+      "images": [
+        "page7_fig2.png"
+      ],
+      "narration": "Polytomous IRT extends the model to handle ordered response categories, like grades from 0 to 3 or survey responses from 'strongly disagree' to 'strongly agree'. The model uses cumulative probabilities, where each response level has its own difficulty threshold. The probability of getting exactly score k is the difference between the cumulative probabilities at k and k+1. As shown in Figure 2, different ability levels make different scores most likely: low ability makes a score of 0 most probable, while high ability makes a score of 3 most probable."
+    },
+    {
+      "title": "Continuous Response Models (CRM)",
+      "section": "IRT: Traditional setting",
+      "key_points": [
+        "Samejima (1973) extended IRT to continuous responses",
+        "Parameters: α (discrimination), β (difficulty), γ (scaling)",
+        "Uses log-odds transformation to map bounded scores to real line",
+        "Normal density type CRM gives probability density for each score"
+      ],
+      "formulas": [
+        "P \\left ( Y \\geq y _ { j } | \\theta \\right ) = \\frac { 1 } { \\sqrt { 2 \\pi } } \\int _ { - \\infty } ^ { v } e ^ { - \\frac { l ^ { 2 } } { 2 } } d t",
+        "v = \\alpha _ { j } \\left ( \\theta - \\beta _ { j } - \\gamma _ { j } \\ln \\frac { y _ { j } } { k _ { j } - y _ { j } } \\right )",
+        "z _ { j } = \\ln \\frac { y _ { j } } { k _ { j } - y _ { j } }"
+      ],
+      "images": [],
+      "narration": "Samejima also developed Continuous Response Models for when scores aren't discrete categories but continuous values. The CRM has three parameters: alpha for discrimination, beta for difficulty, and gamma as a scaling coefficient. First, the continuous score is transformed using a log-odds transformation to map it from a bounded range to the entire real line. Then the model gives a probability density function for each possible score given a person's ability level. This is particularly useful for algorithm evaluation where performance metrics are often continuous."
+    },
+    {
+      "title": "CRM Probability Density and Heatmaps",
+      "section": "IRT: Traditional setting",
+      "key_points": [
+        "Higher difficulty β shifts curves rightward on ability axis",
+        "Higher discrimination α makes curves steeper and sharper",
+        "Heatmaps show high-density regions for different ability levels",
+        "Different items have distinctly shaped response functions"
+      ],
+      "formulas": [
+        "f \\left ( z _ { j } | \\theta \\right ) = \\frac { \\alpha _ { j } \\gamma _ { j } } { \\sqrt { 2 \\pi } } \\exp \\left ( - \\frac { \\alpha _ { j } ^ { 2 } } { 2 } \\left ( \\theta - \\beta _ { j } - \\gamma _ { j } z _ { j } \\right ) ^ { 2 } \\right )"
+      ],
+      "images": [
+        "page9_fig3.png",
+        "page9_fig4.png"
+      ],
+      "narration": "The CRM probability density function gives a bell-shaped curve for each score value z. Looking at Figures 3 and 4, we can see how different parameter values affect the response functions. Higher difficulty beta shifts the curves to the right, meaning you need higher ability to achieve good scores. Higher discrimination alpha makes the curves steeper and the heatmap bands sharper and narrower. These heatmaps are a powerful visualization tool showing the relationship between ability and expected performance for each item."
+    },
+    {
+      "title": "EM Algorithm for CRM Parameter Estimation",
+      "section": "IRT: Traditional setting",
+      "key_points": [
+        "Wang and Zeng (1998) proposed EM algorithm for CRM",
+        "Shojima (2005) enhanced with non-iterative solution per EM cycle",
+        "Posterior distribution of θ is normal due to normal priors",
+        "Parameters updated iteratively until convergence"
+      ],
+      "formulas": [
+        "p \\left ( \\theta _ { i } | \\Lambda ^ { ( t ) } , z _ { i } \\right ) = \\mathcal { N } \\left ( \\theta _ { i } | \\mu _ { i } ^ { ( t ) } , \\sigma ^ { ( t ) 2 } \\right )",
+        "\\sigma ^ { ( t ) 2 } = \\left ( \\sum _ { j } \\alpha _ { j } ^ { ( t ) 2 } + \\sigma ^ { - 2 } \\right ) ^ { - 1 }",
+        "\\mu _ { i } ^ { ( t ) } = \\sigma ^ { ( t ) 2 } \\left ( \\sum _ { j } \\alpha _ { j } ^ { ( t ) 2 } \\left ( \\beta _ { j } ^ { ( t ) } + \\gamma _ { j } ^ { ( t ) } z _ { i j } \\right ) + \\mu \\right )"
+      ],
+      "images": [],
+      "narration": "The CRM parameters are estimated using an expectation-maximization algorithm. Wang and Zeng proposed this approach, and Shojima later enhanced it with a non-iterative solution in each EM cycle, making computation much faster. Using normal priors for the latent trait theta, the posterior distribution turns out to be normal with mean mu and variance sigma-squared. These are updated iteratively: in each cycle, item parameters are computed in closed form, and the process repeats until successive log-likelihoods converge."
+    },
+    {
+      "title": "Non-Iterative Parameter Updates",
+      "section": "IRT: Traditional setting",
+      "key_points": [
+        "Closed-form solutions for γ, β, and α in each EM cycle",
+        "Uses mean, variance, and covariance of observed and latent scores",
+        "Original formulation assumes α > 0 and γ > 0",
+        "Prevents fitting of negative discrimination items"
+      ],
+      "formulas": [
+        "\\gamma _ { j } ^ { ( t + 1 ) } = \\frac { V \\left ( \\mu _ { i } ^ { ( t ) } \\right ) + \\sigma ^ { ( t ) 2 } } { C _ { j } \\left ( z _ { i j } , \\mu _ { i } ^ { ( t ) } \\right ) }",
+        "\\beta _ { j } ^ { ( t + 1 ) } = M \\left ( \\mu _ { i } ^ { ( t ) } \\right ) - \\gamma _ { j } ^ { ( t + 1 ) } M _ { j } \\left ( z _ { i j } \\right )",
+        "\\alpha _ { j } ^ { ( t + 1 ) } = \\left ( \\gamma _ { j } ^ { ( t + 1 ) 2 } V _ { j } ( z _ { i j } ) - V \\left ( \\mu _ { i } ^ { ( t ) } \\right ) - \\sigma ^ { ( t ) 2 } \\right ) ^ { - 1 / 2 }"
+      ],
+      "images": [],
+      "narration": "The key innovation of Shojima's approach is that in each EM cycle, the item parameters gamma, beta, and alpha can be computed in closed form using simple statistics: means, variances, and covariances of the observed scores and estimated latent traits. However, there's a critical limitation: the original formulation assumes both alpha and gamma are positive. If the covariance term is negative, causing gamma to be negative, the log-likelihood becomes incalculable because it requires the logarithm of alpha and gamma separately. This means the algorithm cannot handle negative discrimination items."
+    },
+    {
+      "title": "Modification for Negative Discrimination",
+      "section": "IRT: Traditional setting",
+      "key_points": [
+        "Key modification: replace α>0, γ>0 with αγ>0",
+        "Allows both negative and positive discrimination items",
+        "Updated log-likelihood uses ln|α| + ln|γ| instead of ln(α) + ln(γ)",
+        "Updated α formula includes sign(γ) factor"
+      ],
+      "formulas": [
+        "\\alpha _ { j } ^ { ( t + 1 ) } = \\text {sign} \\left ( \\gamma _ { j } ^ { ( t + 1 ) } \\right ) \\left ( \\gamma _ { j } ^ { ( t + 1 ) 2 } V _ { j } ( z _ { i j } ) - V \\left ( \\mu _ { i } ^ { ( t ) } \\right ) - \\sigma ^ { ( t ) 2 } \\right ) ^ { - 1 / 2 }"
+      ],
+      "images": [],
+      "narration": "A key contribution of this paper is modifying the CRM estimation to accommodate negative discrimination. In educational testing, negative discrimination items are typically removed. But in algorithm evaluation, they represent anomalous algorithms that perform well on hard problems and poorly on easy ones, which is valuable information. The fix is elegant: instead of requiring both alpha and gamma to be positive, we only need their product to be positive. The log-likelihood is rewritten using absolute values, and the alpha update formula includes a sign factor from gamma. This allows the model to fit both typical and anomalous algorithms."
+    },
+    {
+      "title": "Causal Interpretation and DAGs",
+      "section": "IRT: Traditional setting",
+      "key_points": [
+        "IRT has causal interpretation: attributes cause observed scores",
+        "DAG: participant ability and question parameters → marks",
+        "Translates to algorithm evaluation domain",
+        "Explains rather than just predicts performance"
+      ],
+      "formulas": [],
+      "images": [
+        "page12_fig5.png"
+      ],
+      "narration": "IRT has a natural causal interpretation that can be represented as a Directed Acyclic Graph. The attributes of a participant, specifically their ability, and the attributes of a test question, namely difficulty and discrimination, give rise to the observed marks. This causal structure is what makes IRT an explanatory model, not just a predictive one. When we translate this to algorithm evaluation, the attributes of a dataset and an algorithm give rise to the observed performance. This explainability is a key advantage of the AIRT framework."
+    },
+    {
+      "title": "Standard IRT Mapping for Algorithm Evaluation",
+      "section": "Applications to ML",
+      "key_points": [
+        "Natural mapping: algorithms as participants, datasets as test items",
+        "Outputs: dataset difficulty, dataset discrimination, algorithm ability",
+        "Used by Martínez-Plumed et al. and Chen et al.",
+        "Gives one parameter per algorithm (ability) and two per dataset"
+      ],
+      "formulas": [],
+      "images": [
+        "page12_fig6.png"
+      ],
+      "narration": "The most natural way to apply IRT to algorithm evaluation is to treat algorithms as students and datasets as test questions. This is shown in Figure 6. The IRT model then outputs dataset difficulty, dataset discrimination, and algorithm ability. This is the approach taken by previous work. However, notice that this gives us only a single parameter, ability, to describe each algorithm, while datasets get two parameters. For comprehensive algorithm evaluation, we want richer descriptions of algorithms."
+    },
+    {
+      "title": "The Inverted IRT Mapping",
+      "section": "AIRT Framework",
+      "key_points": [
+        "Novel inversion: datasets as participants, algorithms as items",
+        "Produces two parameters for algorithms instead of one",
+        "Momentary loss of intuition yields richer algorithm metrics",
+        "Latent scores of datasets represent dataset easiness"
+      ],
+      "formulas": [],
+      "images": [
+        "page13_fig7.png"
+      ],
+      "narration": "Here's the key innovation of AIRT: we invert the mapping. Instead of algorithms being participants, we make datasets the participants and algorithms the test items. This feels counterintuitive at first, but it's incredibly powerful. Now each algorithm gets two parameters, discrimination and difficulty, instead of just one ability score. From these two parameters, we derive three meaningful algorithm characteristics. The latent scores computed for datasets represent how easy they are for algorithms to handle."
+    },
+    {
+      "title": "Comparing Standard vs Inverted Mappings",
+      "section": "AIRT Framework",
+      "key_points": [
+        "Standard: algorithm ability, dataset difficulty and discrimination",
+        "Inverted: algorithm difficulty limit, anomalousness, consistency; dataset difficulty",
+        "Inverted approach focuses on algorithm evaluation",
+        "Causal DAG: dataset and algorithm attributes → performance"
+      ],
+      "formulas": [],
+      "images": [
+        "page14_fig8.png"
+      ],
+      "narration": "Let's compare the two mappings side by side. The standard approach gives one algorithm characteristic (ability) and two dataset characteristics. The inverted approach gives three algorithm characteristics: difficulty limit, anomalousness, and consistency, plus one dataset characteristic, difficulty. The causal interpretation changes too: now we say that dataset attributes and algorithm attributes jointly give rise to the observed performance. This richer characterization of algorithms is exactly what we need for comprehensive portfolio evaluation."
+    },
+    {
+      "title": "Interpreting the Inverted Model",
+      "section": "AIRT Framework",
+      "key_points": [
+        "Heatmaps now represent individual algorithm performance profiles",
+        "Latent scores represent dataset easiness (negative = difficulty)",
+        "Higher latent score → easier dataset → better algorithm performance",
+        "Histogram of latent scores shows distribution of dataset easiness"
+      ],
+      "formulas": [],
+      "images": [
+        "page14_fig9.png"
+      ],
+      "narration": "In the inverted model, heatmaps and trace lines represent individual algorithms rather than datasets. The latent scores represent dataset easiness: easy datasets have high latent scores and difficult datasets have low latent scores. Looking at Figure 9, the heatmap shows how an algorithm's performance varies with dataset easiness. The trace lines show the probability of achieving different performance levels. The histogram at the bottom shows how datasets are distributed along the easiness spectrum."
+    },
+    {
+      "title": "AIRT Framework: Three Stages",
+      "section": "AIRT Framework",
+      "key_points": [
+        "Stage 1: Fit IRT model with inverted mapping",
+        "Stage 2: Calculate algorithm and dataset metrics from IRT parameters",
+        "Stage 3: Compute strengths/weaknesses and construct portfolios",
+        "Additional: assess model goodness"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "The AIRT framework consists of three main stages. In Stage 1, we fit an IRT model using the inverted mapping where datasets are participants and algorithms are items. In Stage 2, we reinterpret the IRT parameters to calculate algorithm metrics like consistency, anomalousness, and difficulty limit, as well as dataset difficulty scores. In Stage 3, we use these metrics to visualize algorithm strengths and weaknesses across the problem difficulty spectrum and construct competitive algorithm portfolios. We also assess how well the IRT model fits the data."
+    },
+    {
+      "title": "Illustrative Example: CSP-Minizinc-2016",
+      "section": "AIRT Framework",
+      "key_points": [
+        "Constrained satisfaction and optimization problems",
+        "Reciprocal of runtimes used (higher = better performance)",
+        "22 algorithms evaluated on 100 test instances",
+        "Heatmaps show diverse algorithm behaviors"
+      ],
+      "formulas": [],
+      "images": [
+        "page16_fig10.png"
+      ],
+      "narration": "To illustrate AIRT, let's look at the CSP-Minizinc-2016 portfolio from the ASlib repository, which contains constrained satisfaction and optimization problems. Since IRT requires higher values to mean better performance, we take the reciprocal of runtimes. Figure 10 shows the heatmaps for all 22 algorithms. Notice the diversity: some algorithms have sharp bands indicating high discrimination, while others have blurry patterns indicating more consistent but less discriminating behavior. This visualization immediately gives us insight into algorithm behavior."
+    },
+    {
+      "title": "Dataset Difficulty Score",
+      "section": "Dataset metric",
+      "key_points": [
+        "Latent trait θ represents dataset easiness",
+        "Dataset difficulty δ = -θ (flip sign)",
+        "Computed from IRT parameters and performance scores",
+        "Expected to be approximately normally distributed"
+      ],
+      "formulas": [
+        "\\theta _ { i } = \\frac { \\sum _ { j } \\hat { \\alpha } _ { j } ^ { 2 } \\left ( \\hat { \\beta } _ { j } + \\hat { \\gamma } _ { j } z _ { i j } \\right ) } { \\sum _ { j } \\hat { \\alpha } _ { j } ^ { 2 } }",
+        "\\delta _ { i } = - \\theta _ { i }"
+      ],
+      "images": [],
+      "narration": "The first metric AIRT computes is dataset difficulty. The latent trait theta from the IRT model represents how easy a dataset is, so we simply negate it to get difficulty: delta equals negative theta. This difficulty score is a weighted average that incorporates the discrimination, difficulty, and scaling parameters of all algorithms, along with the actual performance scores. Because normal priors are used, the dataset difficulty scores are approximately normally distributed. Easy datasets have low difficulty values and hard datasets have high values."
+    },
+    {
+      "title": "Algorithm Anomalousness",
+      "section": "Algorithm metrics",
+      "key_points": [
+        "Anomalous algorithms perform better on hard problems than easy ones",
+        "Detected by negative discrimination parameter (α < 0)",
+        "In education, negative discrimination items are removed",
+        "In algorithm evaluation, anomalous behavior is valuable information"
+      ],
+      "formulas": [
+        "\\text{anomalous}(j) = \\left\\{ \\begin{array}{ll} {TRUE} & {a_j < 0} \\\\ {FALSE} & {otherwise} \\end{array} \\right\\}"
+      ],
+      "images": [
+        "page17_fig11.png"
+      ],
+      "narration": "An anomalous algorithm is one that performs better on difficult datasets and worse on easy ones, which is the opposite of what we'd typically expect. This shows up as a negative discrimination parameter in the IRT model. In educational testing, questions with negative discrimination are considered problematic and removed. But in algorithm evaluation, this is actually valuable information because it reveals algorithms with unique capabilities. The no-free-lunch theorem tells us that no algorithm dominates everywhere, so understanding these anomalous behaviors helps us build better portfolios."
+    },
+    {
+      "title": "Algorithm Consistency Score",
+      "section": "Algorithm metrics",
+      "key_points": [
+        "Consistency = inverse of absolute discrimination: 1/|α|",
+        "High consistency → similar performance regardless of problem difficulty",
+        "Low discrimination → blurry heatmap bands",
+        "Not inherently good or bad: could be consistently good or consistently poor"
+      ],
+      "formulas": [
+        "\\text {consistency} ( j ) = \\frac { 1 } { | a _ { j } | }"
+      ],
+      "images": [
+        "page18_fig12.png"
+      ],
+      "narration": "Algorithm consistency measures how stable an algorithm's performance is across problems of varying difficulty. It's defined as the inverse of the absolute discrimination parameter. A highly consistent algorithm produces similar results regardless of whether a problem is easy or hard. In the heatmaps, consistent algorithms show blurry bands rather than sharp lines. But important caveat: consistency alone isn't necessarily good. An algorithm can be consistently poor! So consistency should be considered alongside other metrics like the difficulty limit."
+    },
+    {
+      "title": "Algorithm Difficulty Limit",
+      "section": "Algorithm metrics",
+      "key_points": [
+        "Difficulty limit = -β (negated IRT difficulty parameter)",
+        "Higher difficulty limit → algorithm handles harder problems",
+        "Below the limit: algorithm performs well; above: performs poorly",
+        "For polytomous IRT: use highest category threshold"
+      ],
+      "formulas": [
+        "\\text {difficulty} ( j ) = - \\beta _ { j }"
+      ],
+      "images": [
+        "page20_fig13.png"
+      ],
+      "narration": "The difficulty limit tells us the hardest problems an algorithm can handle well. It's simply the negative of the IRT difficulty parameter beta. If a dataset's difficulty is below this limit, we expect the algorithm to perform well; if above, it will struggle. Looking at Figure 13, we see two algorithms with different difficulty limits. The one with a higher limit maintains good performance further into the difficult end of the spectrum. Combined with consistency and anomalousness, these three metrics give us a comprehensive profile of each algorithm."
+    },
+    {
+      "title": "Modeling Performance with Smoothing Splines",
+      "section": "Evaluating portfolios",
+      "key_points": [
+        "Order performance values by dataset difficulty",
+        "Fit smoothing splines to performance vs. difficulty for each algorithm",
+        "Smoothing parameter λ chosen by leave-one-out CV",
+        "Feature-less exploration of algorithm performance"
+      ],
+      "formulas": [
+        "\\sum _ { i = 1 } ^ { N } \\left ( y _ { i j } - h _ { j } ( \\delta _ { i } ) \\right ) ^ { 2 } + \\lambda \\int h _ { j } ^ { \\prime \\prime } ( t ) \\, d t"
+      ],
+      "images": [
+        "page22_fig14.png"
+      ],
+      "narration": "Once we have dataset difficulty scores, we can model how each algorithm's performance changes as problems get harder. For each algorithm, we fit a smoothing spline to the performance values ordered by dataset difficulty. The spline minimizes a combination of squared errors and a wiggliness penalty. The beauty of this approach is that we don't need any external dataset features; the difficulty spectrum itself, derived from the IRT model, serves as our feature. Figure 14 shows these latent trait curves for the CSP-Minizinc portfolio, revealing how different algorithms dominate in different difficulty regions."
+    },
+    {
+      "title": "Computing Algorithm Strengths",
+      "section": "Evaluating portfolios",
+      "key_points": [
+        "Find best algorithm performance at each difficulty level",
+        "Strength: regions where algorithm is within ε of best",
+        "ε = 0 gives single best algorithm per difficulty value",
+        "ε > 0 allows multiple near-best algorithms"
+      ],
+      "formulas": [
+        "h _ { j _ { * } } ( \\delta ) = \\max _ { j } h _ { j } ( \\delta )",
+        "\\text {strength} ( j , \\epsilon ) = \\left \\{ \\delta \\colon | h _ { j } ( \\delta ) - h _ { j _ { * } } ( \\delta ) | \\leq \\epsilon \\right \\}"
+      ],
+      "images": [],
+      "narration": "Algorithm strengths identify where in the problem difficulty spectrum each algorithm excels. First, we find the best performance at each difficulty level using the smoothing splines. Then, an algorithm's strength is the set of difficulty values where it's within epsilon of the best. When epsilon is zero, only the single best algorithm is strong at each point. When epsilon is greater than zero, multiple near-best algorithms can share strength regions. This gives us a nuanced view of where each algorithm adds value."
+    },
+    {
+      "title": "Computing Algorithm Weaknesses",
+      "section": "Evaluating portfolios",
+      "key_points": [
+        "Find worst algorithm performance at each difficulty level",
+        "Weakness: regions where algorithm is within ε of worst",
+        "Complementary to strengths analysis",
+        "Identifies algorithms that should be avoided for certain problems"
+      ],
+      "formulas": [
+        "h _ { j _ { \\# } } ( \\delta ) = \\min _ { j } h _ { j } ( \\delta )",
+        "\\text {weakness} ( j , \\epsilon ) = \\left \\{ \\delta \\, \\colon | h _ { j } ( \\delta ) - h _ { j _ { \\# } } ( \\delta ) | \\leq \\epsilon \\right \\}"
+      ],
+      "images": [
+        "page23_fig15.png"
+      ],
+      "narration": "Similarly, we compute algorithm weaknesses by finding the worst performance at each difficulty level and identifying regions where an algorithm is within epsilon of the worst. Figure 15 shows both strengths and weaknesses for the CSP-Minizinc portfolio. When epsilon is zero, LCG-Glucose-UC-free dominates the strength space for most difficulty values. Many algorithms show weaknesses for the hardest problems. The complementary view of strengths and weaknesses together gives a complete picture of algorithm capabilities."
+    },
+    {
+      "title": "Latent Trait Occupancy (LTO)",
+      "section": "Evaluating portfolios",
+      "key_points": [
+        "LTO measures proportion of datasets in an algorithm's strength region",
+        "Higher LTO indicates algorithm is useful for more diverse problems",
+        "Total LTO can exceed 1 when ε > 0 (overlapping strengths)",
+        "Small LTO means niche strength, possibly risky to rely on"
+      ],
+      "formulas": [
+        "L T O ( j , \\epsilon ) = \\frac { | \\{ i \\colon i \\in \\text {strengthen} ( j , \\epsilon ) \\} | } { N }"
+      ],
+      "images": [],
+      "narration": "Latent Trait Occupancy quantifies how broadly useful an algorithm is. It measures the proportion of datasets that fall within an algorithm's strength region. An algorithm with high LTO is good for many diverse problems, while one with low LTO has only niche strengths. For example, in the CSP-Minizinc portfolio, LCG-Glucose-UC-free has LTO of 0.717 when epsilon equals zero, meaning it's the best algorithm for about 72 percent of datasets. Algorithms with very small LTO might have strengths for a few problems but are risky to rely on."
+    },
+    {
+      "title": "AIRT Portfolio Construction",
+      "section": "Algorithm portfolio selection",
+      "key_points": [
+        "AIRT portfolio: set of all algorithms with non-empty strengths",
+        "Portfolio composition depends on ε parameter",
+        "ε = 0 gives minimal portfolio of strongest algorithms",
+        "Number of algorithms determined by smoothing splines, not specified directly"
+      ],
+      "formulas": [
+        "\\mathcal { A } ( \\epsilon ) = \\left \\{ j \\, \\colon \\text {strengths} ( j , \\epsilon ) \\neq \\emptyset \\right \\}"
+      ],
+      "images": [],
+      "narration": "The AIRT portfolio is simply the set of all algorithms that have at least some strength region in the problem difficulty spectrum for a given epsilon. When epsilon is zero, we get the smallest possible set of algorithms that covers the entire difficulty range. As epsilon increases, more algorithms qualify because being near-best is sufficient. The number of algorithms isn't directly specified; it emerges naturally from the smoothing spline fits and the epsilon threshold. This is a principled way to select a portfolio that covers diverse problem types."
+    },
+    {
+      "title": "Model Goodness: Residual Analysis",
+      "section": "Model goodness",
+      "key_points": [
+        "Compare IRT predicted performance with actual performance",
+        "Scaled absolute residuals ρ bounded in [0,1]",
+        "AUCDF: area under CDF of scaled residuals (higher = better fit)",
+        "MSE computed per algorithm to identify poorly fitted algorithms"
+      ],
+      "formulas": [
+        "F ( \\rho _ { j } ) = P ( \\rho _ { j } \\leq \\rho ) \\quad \\text {for} \\quad \\rho \\in [ 0 , 1 ]"
+      ],
+      "images": [
+        "page25_fig16.png"
+      ],
+      "narration": "To assess how well the IRT model fits, we analyze the residuals between predicted and actual performance for each algorithm. We compute scaled absolute residuals bounded between 0 and 1, and look at their cumulative distribution function. The area under this CDF, called AUCDF, provides a goodness-of-fit measure for each algorithm. A higher AUCDF means the model fits that algorithm well. The MSE gives another perspective. This per-algorithm analysis is important because the overall log-likelihood doesn't show which algorithms are fitted well and which aren't."
+    },
+    {
+      "title": "Actual and Predicted Effectiveness",
+      "section": "Model goodness",
+      "key_points": [
+        "Effectiveness curve: complementary CDF of performance values",
+        "AUAEC: area under actual effectiveness curve",
+        "AUPEC: area under predicted effectiveness curve",
+        "|AUAEC - AUPEC| measures trustworthiness of IRT model per algorithm"
+      ],
+      "formulas": [
+        "\\bar { F } _ { j } ( \\ell ) = P ( t _ { j } \\leq \\ell )"
+      ],
+      "images": [
+        "page27_fig17.png"
+      ],
+      "narration": "Effectiveness curves show how many high-performance results an algorithm achieves. We reverse-sort performance values and compute a complementary CDF. The area under the actual effectiveness curve, AUAEC, measures the algorithm's real ability to produce good results. The area under the predicted effectiveness curve, AUPEC, shows what the IRT model thinks. If AUAEC and AUPEC are close, we can trust the model for that algorithm. A large gap between them suggests the model is unreliable for that particular algorithm."
+    },
+    {
+      "title": "CSP-Minizinc Model Goodness Results",
+      "section": "Model goodness",
+      "key_points": [
+        "Most algorithms have low MSE (good fit)",
+        "HaifaCSP-free has highest MSE and largest |AUAEC-AUPEC|",
+        "AUCDF above 0.7 for most algorithms",
+        "Actual vs. predicted effectiveness generally close"
+      ],
+      "formulas": [],
+      "images": [
+        "page29_fig18.png"
+      ],
+      "narration": "Looking at the model goodness results for the CSP-Minizinc portfolio, we see that the IRT model fits most algorithms well. MSE is low for most algorithms, and AUCDF values are generally above 0.7. The exception is HaifaCSP-free, which has the highest MSE and the largest gap between actual and predicted effectiveness. The effectiveness curves show that most points cluster near the diagonal in the AUAEC-AUPEC plot, confirming the model's overall reliability. These diagnostics give us confidence in the AIRT metrics derived from this model."
+    },
+    {
+      "title": "Computational Complexity",
+      "section": "Computational complexity",
+      "key_points": [
+        "IRT model fitting: O(Nnc) where c is number of EM cycles",
+        "AIRT metrics computation: O(N+n) ≈ O(N)",
+        "Smoothing splines: O(N) per algorithm",
+        "N (datasets) dominates since n (algorithms) is much smaller"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "The computational complexity of AIRT is quite manageable. Fitting the IRT model takes O of N times n times c, where N is the number of datasets, n is algorithms, and c is EM cycles with an upper bound of 200. Since n is much smaller than N, the dominant factor is N. Computing the AIRT metrics is linear in N, and smoothing splines can be fitted in O(N) time per algorithm. Overall, AIRT scales well even for large dataset repositories."
+    },
+    {
+      "title": "Case Study: Classification (OpenML-Weka)",
+      "section": "Results: Classification",
+      "key_points": [
+        "30 WEKA classification algorithms on 105 test instances",
+        "Predictive accuracy as performance metric",
+        "Default parameters used without variation",
+        "Detailed analysis of all AIRT capabilities"
+      ],
+      "formulas": [],
+      "images": [
+        "page32_fig19.png"
+      ],
+      "narration": "Let's dive into the detailed case study of OpenML-Weka classification algorithms. This scenario contains 30 WEKA classifiers evaluated on 105 test instances using predictive accuracy. The heatmaps in Figure 19 show the diversity of algorithm behaviors. Some algorithms like OLM and ConjunctiveRule appear very stable with blurry heatmaps, while others show sharp transitions indicating they're sensitive to dataset difficulty. Notably, no algorithms were found to be anomalous in this portfolio."
+    },
+    {
+      "title": "Classification: AIRT Algorithm Metrics",
+      "section": "Results: Classification",
+      "key_points": [
+        "OLM has highest consistency but lowest difficulty limit (consistently poor)",
+        "RandomForest has highest difficulty limit (handles hardest instances)",
+        "LMT, NaiveBayes, SMO_PolyKernel also have high difficulty limits",
+        "Consistency alone doesn't indicate a good algorithm"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "The AIRT metrics reveal important insights about these classifiers. OLM has the highest consistency score of 3.768, meaning it gives very similar results regardless of problem difficulty. But its difficulty limit is negative at -1.176, the lowest in the portfolio, meaning it consistently performs poorly. RandomForest has the highest difficulty limit at 2.064, making it the best at handling difficult instances. LMT is close behind at 1.994. This demonstrates why you need to look at multiple metrics together: consistency alone tells you nothing about quality."
+    },
+    {
+      "title": "Classification: Latent Trait Curves",
+      "section": "Results: Classification",
+      "key_points": [
+        "RandomForest and LMT dominate the upper portion of curves",
+        "Several algorithms cluster together in the middle",
+        "OLM, ConjunctiveRule, HyperPipes clearly below others",
+        "Performance generally decreases with increasing difficulty"
+      ],
+      "formulas": [],
+      "images": [
+        "page33_fig20.png"
+      ],
+      "narration": "Figure 20 shows the latent trait curves for all 30 classification algorithms. The top of the figure shows raw performance against dataset difficulty, and the bottom shows the fitted smoothing splines. RandomForest and LMT clearly dominate the upper portion for most of the difficulty spectrum. Several algorithms cluster together in the middle, making them somewhat interchangeable. At the bottom, algorithms like OLM, ConjunctiveRule, and HyperPipes are clearly weaker. The dashed lines help identify these underperforming algorithms."
+    },
+    {
+      "title": "Classification: Strengths and Weaknesses",
+      "section": "Results: Classification",
+      "key_points": [
+        "6 algorithms have strengths when ε=0; 14 when ε=0.01",
+        "RandomForest strong for hardest problems (δ > 1.5)",
+        "LMT uniquely strong for medium-hard problems (δ ≈ 0.5-1)",
+        "OLM weak for entire problem space"
+      ],
+      "formulas": [],
+      "images": [
+        "page35_fig21.png"
+      ],
+      "narration": "The strengths and weaknesses diagram in Figure 21 is very revealing. When epsilon equals zero, only 6 algorithms are ever the best, and RandomForest dominates covering 41% of the latent trait. When epsilon increases to 0.01, 14 algorithms show strengths, but mostly for easy problems. LMT is uniquely strong for medium-hard problems, and RandomForest uniquely handles the hardest problems. In the weakness space, OLM is weak across almost the entire spectrum. Together, RandomForest and LMT cover nearly all the difficulty space."
+    },
+    {
+      "title": "Classification: LTO Analysis",
+      "section": "Results: Classification",
+      "key_points": [
+        "RandomForest: LTO 0.41 (ε=0), 0.79 (ε=0.01)",
+        "LMT: LTO 0.276 (ε=0), 0.895 (ε=0.01) — surpasses RandomForest",
+        "AdaBoostM1_J48: LTO 0.267 (ε=0)",
+        "REPTree and 8990_MLP have unique, non-overlapping strengths"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "The Latent Trait Occupancy values tell an interesting story. RandomForest has the highest LTO at 0.41 when epsilon is zero, meaning it's the best for 41% of datasets. But when epsilon increases to 0.01, LMT's LTO jumps to 0.895, actually surpassing RandomForest's 0.79. This means LMT is usually near the top even when it's not the absolute best. AdaBoostM1_J48 is the third most important algorithm. REPTree and 8990_MLP have unique strengths that don't increase much with epsilon, suggesting they have specialized niches."
+    },
+    {
+      "title": "Classification: Model Goodness",
+      "section": "Results: Classification",
+      "key_points": [
+        "MSE < 0.1 for all algorithms except OLM (0.164)",
+        "AUCDF > 0.84 for most algorithms",
+        "OLM has largest |AUAEC-AUPEC| = 0.24",
+        "NaiveBayes and ConjunctiveRule also have notable |AUAEC-AUPEC|"
+      ],
+      "formulas": [],
+      "images": [
+        "page38_fig22.png"
+      ],
+      "narration": "The model goodness metrics confirm that AIRT fits well for most classification algorithms. MSE is below 0.1 for all except OLM, which has an MSE of 0.164. The effectiveness comparison shows most algorithms cluster near the AUAEC=AUPEC line, meaning the model's predictions align with reality. OLM is the outlier with the largest gap of 0.24 between actual and predicted effectiveness. Overall, we can trust the AIRT model for this portfolio, with some caution for OLM's results."
+    },
+    {
+      "title": "Portfolio Comparison: Methodology",
+      "section": "Portfolio selection",
+      "key_points": [
+        "Compare AIRT portfolio with Shapley and topset portfolios",
+        "Shapley: algorithms with highest marginal contribution",
+        "Topset: algorithms with best on-average per-instance performance",
+        "Metric: mean performance gap using 10-fold cross-validation"
+      ],
+      "formulas": [
+        "\\text {Perf. gap} _ { \\mathcal { A } , i , n } = b _ { i } - b _ { \\mathcal { A } , i , n }"
+      ],
+      "images": [],
+      "narration": "To evaluate the AIRT portfolio, we compare it against two alternatives. The Shapley portfolio selects algorithms based on their marginal contribution using coalition game theory concepts. The topset portfolio simply picks algorithms with the best average per-instance performance. We measure success using the performance gap: the difference between the best possible performance using all algorithms and the best performance achievable by each portfolio's selected algorithms. Lower gap means a better portfolio. We use 10-fold cross-validation."
+    },
+    {
+      "title": "Portfolio Comparison: Classification Results",
+      "section": "Portfolio selection",
+      "key_points": [
+        "AIRT portfolio generally achieves lower performance gap",
+        "Cross-validated with standard errors reported",
+        "For ε=0, AIRT selects 6 algorithms",
+        "Performance gap decreases as more algorithms added"
+      ],
+      "formulas": [],
+      "images": [
+        "page39_fig23.png"
+      ],
+      "narration": "Figure 23 shows the cross-validated performance gap comparison for the classification scenario. The AIRT portfolio generally achieves lower or comparable performance gaps compared to Shapley and topset portfolios across different numbers of selected algorithms. For epsilon equals zero, AIRT selects 6 algorithms, which determines the maximum portfolio size for comparison. The standard error bars show that the differences are meaningful. This demonstrates that AIRT's principled approach to portfolio selection, based on the difficulty spectrum analysis, translates into practical performance benefits."
+    },
+    {
+      "title": "Additional Case Studies Overview",
+      "section": "Additional case studies",
+      "key_points": [
+        "9 additional ASlib scenarios tested",
+        "Domains: SAT, CSP, graph problems, MaxSAT, BNSL",
+        "Runtime/par10 metrics transformed to [0,1] scale",
+        "AIRT performs well across most scenarios"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "Beyond classification, the paper tests AIRT on 9 additional algorithm portfolio scenarios from the ASlib repository, spanning diverse domains including constraint satisfaction, Boolean satisfiability, graph problems, MaxSAT, and Bayesian network structure learning. For these scenarios, runtime or par10 values are transformed by negation and scaling to the 0-1 interval, so that higher values indicate better performance. The results demonstrate that AIRT is broadly applicable across problem domains."
+    },
+    {
+      "title": "ASP_POTASSCO Analysis",
+      "section": "Additional case studies",
+      "key_points": [
+        "clasp/2.1.3/h3-n1 is weakest algorithm",
+        "clasp/2.1.3/h1-n1 better for difficult problems",
+        "Some curves show locally anomalous behavior",
+        "AIRT portfolio competitive for n ≥ 6"
+      ],
+      "formulas": [],
+      "images": [
+        "page46_fig24.png"
+      ],
+      "narration": "The ASP_POTASSCO scenario shows interesting locally anomalous behavior where some algorithm curves have turning points, meaning performance improves as problems get harder in certain regions. Algorithm clasp/2.1.3/h3-n1 is clearly the weakest, while clasp/2.1.3/h1-n1 shows unique strength for difficult problems. The AIRT portfolio is competitive, showing lower mean performance gaps for larger portfolio sizes. This illustrates how AIRT can identify algorithms with localized advantages."
+    },
+    {
+      "title": "CSP-MiniZinc-2016 Analysis",
+      "section": "Additional case studies",
+      "key_points": [
+        "Latent trait curves well spread out (high variability)",
+        "LCG-Glucose-UC-free strong for difficult and semi-difficult problems",
+        "Picat-CP-fd is weakest algorithm",
+        "AIRT and topset portfolios perform similarly"
+      ],
+      "formulas": [],
+      "images": [
+        "page46_fig25.png"
+      ],
+      "narration": "The CSP-MiniZinc-2016 scenario has highly variable latent trait curves, resulting in a sparse strengths diagram where only a few algorithms are strong at each difficulty level. LCG-Glucose-UC-free demonstrates sustained strength for difficult and semi-difficult problems, while MZN/Gurobi-free is better for easy and very difficult problems. Picat-CP-fd is the weakest algorithm. Both AIRT and topset portfolios achieve similar performance gaps, both outperforming Shapley."
+    },
+    {
+      "title": "Graphs_2015 and MaxSAT-PMS-2016",
+      "section": "Additional case studies",
+      "key_points": [
+        "Graphs_2015: glasgow2 and glasgow3 strong; vf2 weakest",
+        "MaxSAT: high curve variety with diverse algorithm behaviors",
+        "LMHS-2016 and maxhs-b suited for harder MaxSAT problems",
+        "AIRT achieves lowest performance gap in both"
+      ],
+      "formulas": [],
+      "images": [
+        "page48_fig26.png",
+        "page48_fig27.png"
+      ],
+      "narration": "In the Graphs_2015 scenario, algorithms glasgow2 and glasgow3 are strong for most of the problem space, while vf2 is clearly the weakest. AIRT achieves the smallest performance gap for most portfolio sizes. The MaxSAT-PMS-2016 scenario shows remarkable variety in latent trait curves, with some algorithms performing poorly almost everywhere while others have specialized strengths. LMHS-2016 and maxhs-b are uniquely strong for hard problems. AIRT again demonstrates competitive portfolio selection."
+    },
+    {
+      "title": "PROTEUS-2014 Analysis",
+      "section": "Additional case studies",
+      "key_points": [
+        "Four algorithms show locally anomalous behavior (performance improves with difficulty)",
+        "claspcnf variants strong for large part of problem space",
+        "gecode is weakest algorithm",
+        "AIRT portfolio clearly outperforms alternatives"
+      ],
+      "formulas": [],
+      "images": [
+        "page50_fig28.png"
+      ],
+      "narration": "PROTEUS-2014 presents fascinating locally anomalous behavior: four algorithms achieve local performance minima at medium difficulty, then improve as problems get harder. This isn't global anomalousness but rather a localized phenomenon that AIRT can capture through the smoothing splines. The claspcnf variants display strengths across a large part of the problem space, while gecode is the weakest. The AIRT portfolio clearly outperforms both Shapley and topset alternatives in this scenario."
+    },
+    {
+      "title": "SAT Scenarios: SAT11-INDU and SAT12-ALL",
+      "section": "Additional case studies",
+      "key_points": [
+        "SAT11-INDU: algorithms very similar, curves bundled together",
+        "SAT12-ALL: diverse curves with varying behavior",
+        "AIRT works best when algorithms are diverse",
+        "Shapley slightly better for SAT11-INDU (similar algorithms)"
+      ],
+      "formulas": [],
+      "images": [
+        "page50_fig29.png",
+        "page51_fig30.png"
+      ],
+      "narration": "The SAT scenarios reveal an important insight about when AIRT works best. In SAT11-INDU, the latent trait curves are bundled together, meaning algorithms perform similarly. Here, AIRT doesn't clearly outperform Shapley. But in SAT12-ALL, curves are diverse with different shapes and behaviors, and AIRT achieves clearly lower performance gaps. This confirms that AIRT excels at identifying good portfolios when algorithms have diverse strengths, which is exactly when portfolio selection matters most."
+    },
+    {
+      "title": "BNSL-2016 and SAT18-EXP-ALGO",
+      "section": "Additional case studies",
+      "key_points": [
+        "BNSL: pairs of similar algorithms (ilp-141 and ilp-141-nc)",
+        "SAT18: YalSAT shows dramatic anomalous-like behavior",
+        "Algorithm curves reveal groupings and unique behaviors",
+        "AIRT achieves good performance in both scenarios"
+      ],
+      "formulas": [],
+      "images": [
+        "page51_fig31.png",
+        "page52_fig32.png"
+      ],
+      "narration": "The BNSL-2016 scenario reveals pairs of algorithms with nearly identical curves, like ilp-141 and ilp-141-nc, suggesting redundancy in the portfolio. SAT18-EXP-ALGO features YalSAT with a dramatic curve that starts at the bottom for easy instances and ends up at the top for hard instances, showing strong locally anomalous behavior. These case studies demonstrate AIRT's ability to reveal diverse algorithm behaviors across many problem domains while constructing competitive portfolios."
+    },
+    {
+      "title": "Summary of Portfolio Comparisons",
+      "section": "Results summary",
+      "key_points": [
+        "AIRT achieves lowest mean performance gap in 7 of 10 scenarios",
+        "Works best when algorithms have diverse performance profiles",
+        "Competitive even when algorithms are similar",
+        "Cross-validation confirms robustness of results"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "Across all 10 ASlib scenarios, the AIRT portfolio achieves the lowest mean performance gap in 7 cases when selecting 5 algorithms. Even in the remaining cases, AIRT is competitive. The key insight is that AIRT excels when algorithms have diverse performance profiles, which is precisely when portfolio selection provides the most value. The 10-fold cross-validation with standard errors confirms that these results are robust and not artifacts of overfitting to particular data splits."
+    },
+    {
+      "title": "AIRT's Explainability Advantage",
+      "section": "Discussion",
+      "key_points": [
+        "IRT parameters have causal interpretations from educational psychometrics",
+        "Difficult problems yield low performance (causal explanation)",
+        "Consistent algorithms give similar results regardless of difficulty",
+        "Anomalous algorithms behave unusually — better on harder problems",
+        "Simple explanations are a feature, not a bug"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "A crucial advantage of AIRT is its explainability. Because it inherits the causal interpretation of IRT from educational psychometrics, the metrics have intuitive meaning. Difficult problems lead to lower performance. Algorithms with high difficulty limits can handle harder problems. Consistent algorithms give similar results regardless of difficulty. Anomalous algorithms do the unexpected. These explanations may seem simple, but that's exactly what makes them useful. As the Oxford English Dictionary says, an explanation 'makes clear or accounts for something.'"
+    },
+    {
+      "title": "AIRT vs Instance Space Analysis",
+      "section": "Discussion",
+      "key_points": [
+        "Instance space analysis requires computing dataset features",
+        "AIRT needs only performance data — no features required",
+        "AIRT computes 1D problem space (difficulty) from performance alone",
+        "Similar insights achievable without feature engineering",
+        "Trade-off: 1D difficulty vs multi-dimensional feature space"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "One of AIRT's key advantages over instance space analysis is that it requires no dataset features. Instance space analysis constructs a 2D space by computing features of test instances and projecting them, which requires significant effort in feature engineering. AIRT computes a 1-dimensional problem difficulty spectrum entirely from performance data. Despite this simpler approach, the case studies show that AIRT reveals similar insights about algorithm strengths, weaknesses, and complementarity. The trade-off is that the 1D difficulty spectrum is less informative than a multi-dimensional feature space, but much easier to construct."
+    },
+    {
+      "title": "Limitations and Future Work",
+      "section": "Conclusions",
+      "key_points": [
+        "Algorithm implementations tested with fixed parameters only",
+        "Different parameter settings could yield different curves",
+        "AIRT could be extended for parameter selection",
+        "Future: use AIRT for dataset repository design",
+        "Explore alternative IRT remappings"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "The paper acknowledges some limitations. All ASlib algorithms are tested with fixed parameter and hyperparameter settings, and different settings could change the results. However, this also presents an opportunity: AIRT could be used to select parameter settings that work well for easy versus difficult problems by treating each configuration as a separate algorithm. Future work includes using AIRT for dataset repository design, ensuring collections are diverse enough for meaningful algorithm evaluation, and exploring alternative IRT remappings."
+    },
+    {
+      "title": "AIRT Framework Summary",
+      "section": "Conclusions",
+      "key_points": [
+        "Inverted IRT yields three algorithm metrics: consistency, anomalousness, difficulty limit",
+        "Smoothing splines on difficulty spectrum reveal strengths and weaknesses",
+        "AIRT portfolio competitive with Shapley and topset approaches",
+        "Model goodness measures validate IRT fit per algorithm",
+        "Available as R package 'airt'"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "To summarize, AIRT is a comprehensive framework for algorithm portfolio evaluation built on an inverted IRT model. It provides three interpretable algorithm metrics: consistency, anomalousness, and difficulty limit. By fitting smoothing splines to the problem difficulty spectrum, it reveals where each algorithm excels and where it struggles. The resulting portfolios are competitive with established approaches. Model goodness measures ensure the results are trustworthy. The entire framework is available as the R package airt, making it accessible for the research community."
+    },
+    {
+      "title": "Key Takeaways",
+      "section": "Conclusions",
+      "key_points": [
+        "Simple inversion of IRT mapping unlocks richer algorithm evaluation",
+        "No features needed — only performance data",
+        "Explainable metrics with causal interpretations",
+        "Broadly applicable across problem domains (classification, SAT, CSP, etc.)",
+        "Complementary to existing methods like instance space analysis"
+      ],
+      "formulas": [],
+      "images": [],
+      "narration": "The key takeaways from this paper are that a seemingly simple inversion of the IRT mapping unlocks a much richer set of algorithm evaluation metrics. AIRT works with performance data alone, requiring no dataset features. Its metrics have intuitive causal interpretations inherited from educational psychometrics. The framework is broadly applicable across diverse problem domains as demonstrated on 10 case studies spanning classification, SAT, CSP, graph problems, and more. Rather than replacing existing methods, AIRT complements them by offering a feature-free perspective on algorithm portfolio evaluation."
+    }
+  ]
+}
